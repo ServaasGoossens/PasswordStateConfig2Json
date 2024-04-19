@@ -19,3 +19,8 @@ Powershell script that reads the PasswordState configuration from the database a
 
 ## Compatibility
 The current version has been tested with PasswordState version 9.8 Build 9858. Whether it works with other versions depends on the differences in the DB Schema. See the [PasswordState Change log](https://www.clickstudios.com.au/passwordstate-changelog.aspx).
+
+## What about keys and other sensitive data?
+The script masks sensitive data that is part of the configuration. It does this by removing keys and passwords and replacing them with asterisks before the data is stored on disk.
+
+__TAKE CARE__: I may have missed some data that should be masked. Please let me know by creating an issue. __You are responsible for verifying the results in your environment. No warranty, use at your own risk.__
