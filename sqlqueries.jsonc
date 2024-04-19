@@ -1,0 +1,423 @@
+[ // Tested with PasswordState 9.8 Build 9858
+    {
+        "Name": "DiscoveryJobs",
+        "Tablename": "DiscoveryJobs",
+        "MaskProperties": [
+            "InitialPassword"
+        ]
+    },
+    {
+        "Name": "ActiveDirectoryDomains",
+        "Tablename": "ADDomains"
+    },
+    {
+        "Name": "WebServers",
+        "Query": [
+            "SET NOCOUNT ON",
+            "DECLARE @Delim char = ':'",
+            "DECLARE @ServerRoles TABLE (RoleID INT, Role NVARCHAR(60))",
+            "INSERT INTO @ServerRoles VALUES ",
+            "  -- ordered as shown in the UI",
+            "  (1, 'Standard API'),",
+            "  (2, 'Windows Integrated API'),",
+            "  (3, 'Mobile App'),",
+            "  (4, 'Browser Extensions'),",
+            "  (5, 'Remote Site Locations Agent'),",
+            "  (6, 'Password Reset Portal'),",
+            "  (7, 'Self Destruct Messages')",
+            "",
+            "-- Inner select query inspired by SplitString function by Aaron Bertrand (https://stackoverflow.com/a/19935646/21124015), used under the terms of CC BY-SA 3.0.",
+            "SELECT *, ",
+            "(",
+            "  SELECT COALESCE((SELECT Role FROM @ServerRoles WHERE RoleID=idx),'???') AS Role, Idx",
+            "  FROM ",
+            "  (",
+            "    SELECT Value, idx = RANK() OVER (ORDER BY n)",
+            "    FROM ",
+            "    ( ",
+            "      SELECT n = Number, ",
+            "        Value = LTRIM(RTRIM(SUBSTRING(ws.FunctionalRoles, Number,",
+            "          CHARINDEX(@Delim, ws.FunctionalRoles + @Delim, Number) - Number)))",
+            "      FROM (SELECT Number = ROW_NUMBER() OVER (ORDER BY name)",
+            "            FROM sys.all_objects) AS x",
+            "      WHERE Number <= LEN(ws.FunctionalRoles)",
+            "        AND SUBSTRING(@Delim + ws.FunctionalRoles, Number, LEN(@Delim)) = @Delim",
+            "    ) as y",
+            "  ) as z",
+            "  WHERE value='True'",
+            "  ORDER BY Idx",
+            "  FOR JSON AUTO",
+            ") as FunctionalRoles2",
+            "FROM WebServers ws",
+            "FOR JSON PATH, ROOT ('WebServers')"
+        ],
+        "MaskProperties": [
+            "PollHeartbeatTime"
+        ]
+    },
+    {
+        "Name": "BackupSettings",
+        "Tablename": "BackupSettings",
+        "MaskProperties": [
+            "BackupDatabase",
+            "BackupEncryptionKeys",
+            "BackupFiles",
+            "BackupTest1",
+            "BackupTest2",
+            "BackupTest3",
+            "BackupTest4"
+        ]
+    },
+    {
+        "Name": "BadPasswords",
+        "Tablename": "BadPasswords"
+    },
+    {
+        "Name": "BrowserExtensionSettings",
+        "Tablename": "BrowserExtensionSettings"
+    },
+    {
+        "Name": "EmailNotificationGroups",
+        "Query": [
+            "select eng.*,",
+            "  (",
+            "    select SecurityGroupID, UserID",
+            "    from EmailNotificationGroupsACL acl",
+            "    WHERE acl.EmailNotificationGroupID = eng.EmailNotificationGroupID",
+            "    FOR JSON AUTO",
+            "  ) as ACL,",
+            "  (",
+            "    select beng.NotificationID, beng.Category",
+            "    from BlockedEmailNotificationGroups beng",
+            "    WHERE beng.EmailNotificationGroupID = eng.EmailNotificationGroupID",
+            "    FOR JSON AUTO",
+            "  ) as BlockedEmailNotifications",
+            "from EmailNotificationGroups eng",
+            "FOR JSON PATH, root('EmailNotificationGroups')"
+        ]
+    },
+    {
+        "Name": "EmailTemplates",
+        "Tablename": "EmailTemplates"
+    },
+    {
+        "Name": "FeaturesAccess",
+        "Tablename": "FeaturesACL"
+    },
+    {
+        "Name": "RestrictedFeatures",
+        "Tablename": "RestrictedFeatures"
+    },
+    {
+        "Name": "HostTypes",
+        "Tablename": "HostTypes"
+    },
+    {
+        "Name": "OperatingSystems",
+        "Tablename": "OperatingSystems"
+    },
+    {
+        "Name": "AccountTypes",
+        "Tablename": "AccountTypes"
+    },
+    {
+        "Name": "Licenses",
+        "Tablename": "Licenses"
+    },
+    {
+        "Name": "PasswordGenerators",
+        "Tablename": "PasswordGenerators"
+    },
+    {
+        "Name": "PasswordListTemplates",
+        "Query": [
+            "select plt.*,",
+            "( select pltacl.permissions, pltacl.SecurityGroupID, ",
+            "    ( select sg.SecurityGroupName ",
+            "      from SecurityGroups sg ",
+            "      where sg.SecurityGroupID = pltacl.SecurityGroupID",
+            "    ) as SecurityGroupName, ",
+            "    pltacl.UserID, pltacl.MobileAccess",
+            "  from PasswordListTemplatesACL pltacl",
+            "  where pltacl.PasswordListTemplateID = plt.PasswordListTemplateID",
+            "  for json AUTO",
+            ") as ACL",
+            "from PasswordListTemplates plt",
+            "FOR JSON PATH, root('PasswordListTemplates')"
+        ]
+    },
+    {
+        "Name": "PasswordStrengthPolicies",
+        "Tablename": "PasswordStrengthPolicies"
+    },
+    {
+        "Name": "PrivilegedAccounts",
+        "Query": [
+            "select pa.PrivilegedAccountID, pa.Description, pa.UserName,",
+            "  pa.Password, pa.PasswordID, pa.KeyType,",
+            "  pa.PassPhrase, pa.PrivateKey, pa.SiteID,",
+            "  pa.AccountType, pa.EnablePassword, pa.Hash,",
+            "  ( select paacl.SecurityGroupID,",
+            "      ( select sg.SecurityGroupName",
+            "        from SecurityGroups sg",
+            "        where sg.SecurityGroupID = paacl.SecurityGroupID",
+            "      ) as SecurityGroupName,",
+            "    paacl.UserID, paacl.GUID, paacl.AccessExpiresAt",
+            "    from PrivilegedAccountsACL paacl",
+            "    where paacl.PrivilegedAccountID = pa.PrivilegedAccountID",
+            "    for json AUTO",
+            "  ) as ACL",
+            "from PrivilegedAccounts pa",
+            "FOR JSON PATH, root('PrivilegedAccounts')"
+        ],
+        "MaskProperties": [
+            "Password",
+            "PassPhrase",
+            "PrivateKey",
+            "EnablePassword"
+        ]
+    },
+    {
+        "Name": "ResetPasswordScripts",
+        "Query": [
+            "select ScriptID, ScriptName, ScriptDescription,",
+            "  len(script) as ScriptLength,",
+            "  Convert(varchar(64), HASHBYTES('SHA2_256',script), 2) as ScriptSHA256,",
+            "  Inbuilt, Author, UpdatedBy, LastUpdated, Template, TemplateType",
+            "from Scripts",
+            "FOR JSON PATH, ROOT ('ResetPasswordScripts')"
+        ]
+    },
+    {
+        "Name": "ValidationScripts",
+        "Query": [
+            "select ScriptID, ScriptName, ScriptDescription,",
+            "  len(script) as ScriptLength,",
+            "  Convert(varchar(64), HASHBYTES('SHA2_256',script), 2) as ScriptSHA256,",
+            "  Inbuilt, Author, UpdatedBy, LastUpdated",
+            "from ValidationScripts",
+            "FOR JSON PATH, ROOT ('ValidationScripts')"
+        ]
+    },
+    {
+        "Name": "DiscoveryScripts",
+        "Query": [
+            "select ScriptID, ScriptName, ScriptDescription,",
+            "  len(script) as ScriptLength,",
+            "  Convert(varchar(64), HASHBYTES('SHA2_256',script), 2) as ScriptSHA256",
+            "from DiscoveryScripts",
+            "FOR JSON PATH, ROOT ('DiscoveryScripts')"
+        ]
+    },
+    {
+        "Name": "SSHTemplateScripts",
+        "Query": [
+            "select TemplateScriptID, ScriptName,",
+            "  len(script) as ScriptLength, ",
+            "  Convert(varchar(64),HASHBYTES('SHA2_256',script),2) as ScriptSHA256",
+            "from SSHTemplateScripts",
+            "FOR JSON PATH, ROOT ('SSHTemplateScripts')"
+        ]
+    },
+    {
+        "Name": "RemoteSessionCredentials",
+        "Query": [
+            "Select rsc.*,",
+            "  ( select rscacl.SecurityGroupID,",
+            "      (select sg.SecurityGroupName",
+            "      from SecurityGroups sg",
+            "      where sg.SecurityGroupID = rscacl.SecurityGroupID) as SecurityGroupName,",
+            "    rscacl.UserID, rscacl.GUID, rscacl.AccessExpiresAt",
+            "    from RemoteSessionCredentialsACL rscacl",
+            "    where rscacl.CredentialID = rsc.CredentialID",
+            "    for json AUTO",
+            "  ) as ACL",
+            "from RemoteSessionCredentials rsc",
+            "for JSON PATH, ROOT ('RemoteSessionCredentials')"
+        ]
+    },
+    {
+        "Name": "SecurityAdmins", 
+        "Query": [ 
+            "SET NOCOUNT ON",
+            "DECLARE @Delim char = ':'",
+            "DECLARE @AdminRoles TABLE (RoleID INT, Role NVARCHAR(60))",
+            "INSERT INTO @AdminRoles VALUES ",
+            "  -- ordered as shown in the UI",
+            "  (1, 'Account Discovery'),",
+            "  (2, 'Active Directory Domains'),",
+            "  (3, 'Auditing'),",
+            "  (4, 'Auditing Graphs'),",
+            "  (5, 'Authorized Web Servers'),",
+            "  (6, 'Backups'),",
+            "  (7, 'Bad Passwords'),",
+            "  (8, 'Browser Extension Settings'),",
+            "  (45, 'Brute Force Blocked IPs'),",
+            "  (9, 'Email Notification Groups'),",
+            "  (10, 'Email Templates'),",
+            "  (11, 'Emergency Access'),",
+            "  (12, 'Encryption Keys'),",
+            "  (13, 'Error Console'),",
+            "  (14, 'Export All Passwords'),",
+            "  (18, 'Feature Access'),",
+            "  (15, 'Host Types & Operating Systems'),",
+            "  (16, 'Images and Account Types'),",
+            "  (17, 'License Information'),",
+            "  (19, 'Password Folders'),",
+            "  (20, 'Password Generator Policies'),",
+            "  (21, 'Password Lists'),",
+            "  (22, 'Password List Templates'),",
+            "  (23, 'Password Strength Policies'),",
+            "  (24, 'Privileged Account Credentials'),",
+            "  (25, 'PowerShell Scripts'),",
+            "  (42, 'Remote Session Management'),",
+            "  (26, 'Reporting'),",
+            "  (27, 'Security Administrators'),",
+            "  (28, 'Security Groups'),",
+            "  (29, 'System Settings'),",
+            "  (30, 'User Accounts'),",
+            "  (31, 'User Account Policies'),",
+            "  (32, 'Site Locations'),",
+            "  (33, 'PR Portal: Active Directory Domains'),",
+            "  (34, 'PR Portal: Auditing'),",
+            "  (35, 'PR Portal: Auditing Graphs'),",
+            "  (43, 'PR Portal: Bad Passwords'),",
+            "  (44, 'PR Portal: Password Policies'),",
+            "  (36, 'PR Portal: Privileged Account Credentials'),",
+            "  (37, 'PR Portal: Reporting'),",
+            "  (38, 'PR Portal: Security Groups'),",
+            "  (39, 'PR Portal: System Settings'),",
+            "  (40, 'PR Portal: User Account Management'),",
+            "  (41, 'PR Portal: Verification Policies')",
+            "",
+            "-- Inner select query inspired by SplitString function by Aaron Bertrand (https://stackoverflow.com/a/19935646/21124015), used under the terms of CC BY-SA 3.0.",
+            "SELECT *, ",
+            "(",
+            "  SELECT COALESCE((SELECT Role FROM @AdminRoles WHERE RoleID=idx),'???') AS Role, value AS Enabled, Idx",
+            "  FROM ",
+            "  (",
+            "    SELECT Value, idx = RANK() OVER (ORDER BY n)",
+            "    FROM ",
+            "    ( ",
+            "      SELECT n = Number, ",
+            "        Value = LTRIM(RTRIM(SUBSTRING(sa.roles, Number,",
+            "          CHARINDEX(@Delim, sa.roles + @Delim, Number) - Number)))",
+            "      FROM (SELECT Number = ROW_NUMBER() OVER (ORDER BY name)",
+            "            FROM sys.all_objects) AS x",
+            "      WHERE Number <= LEN(sa.roles)",
+            "        AND SUBSTRING(@Delim + sa.roles, Number, LEN(@Delim)) = @Delim",
+            "    ) as y",
+            "  ) as z",
+            "  ORDER BY Role",
+            "  FOR JSON AUTO",
+            ") as Roles2",
+            "FROM SecurityAdmins sa",
+            "FOR JSON PATH, ROOT ('SecurityAdmins')"
+        ]
+    },
+    {
+        "Name": "SystemSettings",
+        "Tablename": "SystemSettings",
+        "MaskProperties": [
+            "CloudMailClientSecret",
+            "DuoIntegrationKey",
+            "DuoSecretKey",
+            "EA_APIKey",
+            "EA_OneTimePassword",
+            "EA_Password",
+            "MB_Password",
+            "MobileAppPairingSecret",
+            "ProxyPassword",
+            "RADIUSSecret",
+            "Secret3",
+            "Secret4",
+            "SelfDestructDefaultPassphrase",
+            "SelfDestructEncryptionKey",
+            "XORKey",
+            "YubicoSecretkey"
+        ]
+    },
+    {
+        "Name": "APIkeys",
+        "TableName": "APIkeys",
+        "MaskProperties": [
+            "APIKey"
+        ]
+    },
+    {
+        "Name": "UserAccountPolicies",
+        "Tablename": "UserAccountPolicies"
+    },
+    {
+        "Name": "SiteLocations",
+        "TableName": "SiteLocations",
+        "MaskProperties": [
+            "InTransitKey"
+        ]
+    },
+    {
+        "Name": "PR_ADDomains",
+        "TableName": "PR_ADDomains"
+    },
+    {
+        "Name": "PR_BadPasswords",
+        "TableName": "PR_BadPasswords"
+    },
+    {
+        "Name": "PR_PasswordPolicies",
+        "Query": [
+            "SELECT pp.*,",
+            "  ( SELECT ppacl.SecurityGroupID,",
+            "      (SELECT sg.SecurityGroupName",
+            "      FROM PR_SecurityGroups sg",
+            "      WHERE sg.SecurityGroupID = ppacl.SecurityGroupID) AS SecurityGroupName,",
+            "    ppacl.UserID",
+            "    FROM PR_PasswordPoliciesACL ppacl",
+            "    WHERE ppacl.PasswordPolicyID = pp.PasswordPolicyID",
+            "    FOR JSON AUTO",
+            "  ) AS ACL",
+            "FROM PR_PasswordPolicies pp",
+            "FOR JSON PATH, ROOT ('PR_PasswordPolicies')"
+        ]
+    },
+    {
+        "Name": "PR_PrivilegedAccounts",
+        "TableName": "PR_PrivilegedAccounts",
+        "MaskProperties": [
+            "Password"
+        ]
+    },
+    {
+        "Name": "PR_Questions",
+        "TableName": "PR_Questions"
+    },
+    {
+        "Name": "PR_ResetReasons",
+        "TableName": "PR_ResetReasons"
+    },
+    {
+        "Name": "PR_SystemSettings",
+        "TableName": "PR_SystemSettings",
+        "MaskProperties": [
+            "APIKey",
+            "PortalAPIKey"
+        ]
+    },
+    {
+        "Name": "PR_VerificationPolicies",
+        "Query": [
+            "SELECT vp.*,",
+            "  ( SELECT vpacl.SecurityGroupID,",
+            "      (SELECT sg.SecurityGroupName",
+            "      FROM PR_SecurityGroups sg",
+            "      WHERE sg.SecurityGroupID = vpacl.SecurityGroupID) AS SecurityGroupName,",
+            "      vpacl.UserID",
+            "    FROM PR_VerificationPoliciesACL vpacl",
+            "    WHERE vpacl.VerificationPolicyID= vp.VerificationPolicyID",
+            "    FOR JSON AUTO",
+            "  ) AS ACL",
+            "FROM PR_VerificationPolicies vp",
+            "FOR JSON PATH, ROOT ('PR_VerificationPolicies')"
+        ]
+    }
+]
