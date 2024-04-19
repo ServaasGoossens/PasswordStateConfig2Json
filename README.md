@@ -2,6 +2,7 @@
 Powershell script that reads the PasswordState configuration from the database and stores it in JSON format.
 
 ## Prerequisites
+- [PasswordState](https://www.clickstudios.com.au/passwordstate.aspx) version 9.8 (see compatibility below)
 - A user account with read access to the passwordstate database
 - Powershell 7
 - [Powershell Module SQLServer](https://www.powershellgallery.com/packages/SqlServer)
