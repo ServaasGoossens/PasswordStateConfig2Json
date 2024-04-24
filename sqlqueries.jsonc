@@ -2,9 +2,6 @@
     {
         "Name": "DiscoveryJobs",
         "Tablename": "DiscoveryJobs",
-        "MaskProperties": [
-            "InitialPassword"
-        ]
     },
     {
         "Name": "ActiveDirectoryDomains",
@@ -12,6 +9,7 @@
     },
     {
         "Name": "WebServers",
+        "TableName": "WebServers",
         "Query": [
             "SET NOCOUNT ON",
             "DECLARE @Delim char = ':'",
@@ -52,21 +50,12 @@
             "FOR JSON PATH, ROOT ('WebServers')"
         ],
         "MaskProperties": [
-            "PollHeartbeatTime"
+            "PollHeartbeatTime" // This value changes all the time, which makes it a distraction.
         ]
     },
     {
         "Name": "BackupSettings",
-        "Tablename": "BackupSettings",
-        "MaskProperties": [
-            "BackupDatabase",
-            "BackupEncryptionKeys",
-            "BackupFiles",
-            "BackupTest1",
-            "BackupTest2",
-            "BackupTest3",
-            "BackupTest4"
-        ]
+        "Tablename": "BackupSettings"
     },
     {
         "Name": "BadPasswords",
@@ -78,6 +67,7 @@
     },
     {
         "Name": "EmailNotificationGroups",
+        "TableName": "EmailNotificationGroups",
         "Query": [
             "select eng.*,",
             "  (",
@@ -130,6 +120,7 @@
     },
     {
         "Name": "PasswordListTemplates",
+        "TableName": "PasswordListTemplates",
         "Query": [
             "select plt.*,",
             "( select pltacl.permissions, pltacl.SecurityGroupID, ",
@@ -152,33 +143,29 @@
     },
     {
         "Name": "PrivilegedAccounts",
+        "TableName": "PrivilegedAccounts",
         "Query": [
             "select pa.PrivilegedAccountID, pa.Description, pa.UserName,",
             "  pa.Password, pa.PasswordID, pa.KeyType,",
             "  pa.PassPhrase, pa.PrivateKey, pa.SiteID,",
-            "  pa.AccountType, pa.EnablePassword, pa.Hash,",
+            "  pa.AccountType, pa.EnablePassword,",
             "  ( select paacl.SecurityGroupID,",
             "      ( select sg.SecurityGroupName",
             "        from SecurityGroups sg",
             "        where sg.SecurityGroupID = paacl.SecurityGroupID",
             "      ) as SecurityGroupName,",
-            "    paacl.UserID, paacl.GUID, paacl.AccessExpiresAt",
+            "    paacl.UserID, paacl.AccessExpiresAt",
             "    from PrivilegedAccountsACL paacl",
             "    where paacl.PrivilegedAccountID = pa.PrivilegedAccountID",
             "    for json AUTO",
             "  ) as ACL",
             "from PrivilegedAccounts pa",
             "FOR JSON PATH, root('PrivilegedAccounts')"
-        ],
-        "MaskProperties": [
-            "Password",
-            "PassPhrase",
-            "PrivateKey",
-            "EnablePassword"
         ]
     },
     {
         "Name": "ResetPasswordScripts",
+        "TableName": "Scripts",
         "Query": [
             "select ScriptID, ScriptName, ScriptDescription,",
             "  len(script) as ScriptLength,",
@@ -190,6 +177,7 @@
     },
     {
         "Name": "ValidationScripts",
+        "TableName": "ValidationScripts",
         "Query": [
             "select ScriptID, ScriptName, ScriptDescription,",
             "  len(script) as ScriptLength,",
@@ -201,6 +189,7 @@
     },
     {
         "Name": "DiscoveryScripts",
+        "TableName": "DiscoveryScripts",
         "Query": [
             "select ScriptID, ScriptName, ScriptDescription,",
             "  len(script) as ScriptLength,",
@@ -211,6 +200,7 @@
     },
     {
         "Name": "SSHTemplateScripts",
+        "TableName": "SSHTemplateScripts",
         "Query": [
             "select TemplateScriptID, ScriptName,",
             "  len(script) as ScriptLength, ",
@@ -221,13 +211,14 @@
     },
     {
         "Name": "RemoteSessionCredentials",
+        "TableName": "RemoteSessionCredentials",
         "Query": [
             "Select rsc.*,",
             "  ( select rscacl.SecurityGroupID,",
             "      (select sg.SecurityGroupName",
             "      from SecurityGroups sg",
             "      where sg.SecurityGroupID = rscacl.SecurityGroupID) as SecurityGroupName,",
-            "    rscacl.UserID, rscacl.GUID, rscacl.AccessExpiresAt",
+            "    rscacl.UserID, rscacl.AccessExpiresAt",
             "    from RemoteSessionCredentialsACL rscacl",
             "    where rscacl.CredentialID = rsc.CredentialID",
             "    for json AUTO",
@@ -238,6 +229,7 @@
     },
     {
         "Name": "SecurityAdmins", 
+        "TableName": "SecurityAdmins",
         "Query": [ 
             "SET NOCOUNT ON",
             "DECLARE @Delim char = ':'",
@@ -319,30 +311,13 @@
         "Name": "SystemSettings",
         "Tablename": "SystemSettings",
         "MaskProperties": [
-            "CloudMailClientSecret",
-            "DuoIntegrationKey",
-            "DuoSecretKey",
-            "EA_APIKey",
-            "EA_OneTimePassword",
-            "EA_Password",
-            "MB_Password",
-            "MobileAppPairingSecret",
-            "ProxyPassword",
-            "RADIUSSecret",
             "Secret3",
-            "Secret4",
-            "SelfDestructDefaultPassphrase",
-            "SelfDestructEncryptionKey",
-            "XORKey",
-            "YubicoSecretkey"
+            "Secret4"
         ]
     },
     {
         "Name": "APIkeys",
-        "TableName": "APIkeys",
-        "MaskProperties": [
-            "APIKey"
-        ]
+        "TableName": "APIkeys"
     },
     {
         "Name": "UserAccountPolicies",
@@ -365,6 +340,7 @@
     },
     {
         "Name": "PR_PasswordPolicies",
+        "TableName": "PR_PasswordPolicies",
         "Query": [
             "SELECT pp.*,",
             "  ( SELECT ppacl.SecurityGroupID,",
@@ -397,14 +373,11 @@
     },
     {
         "Name": "PR_SystemSettings",
-        "TableName": "PR_SystemSettings",
-        "MaskProperties": [
-            "APIKey",
-            "PortalAPIKey"
-        ]
+        "TableName": "PR_SystemSettings"
     },
     {
         "Name": "PR_VerificationPolicies",
+        "TableName": "PR_VerificationPolicies",
         "Query": [
             "SELECT vp.*,",
             "  ( SELECT vpacl.SecurityGroupID,",

@@ -11,11 +11,13 @@
 # This script reads the configuration data from a passwordstate database
 # and writes it to a set of JSON files. 
 #
-# What data to read is specified by sqlqueries.jsonc. Passwords and other secrets
-# are masked (replaced by "********") as specified in sqlqueries.jsonc.
+# What data to read is specified by sqlqueries.jsonc. Some values, such
+# as passwords and other secrets, are masked (replaced by "********").
+# This is automatically done for fields of type VarBinary (many of which
+# contain encrypted data). Additional fields to be masked can be specified 
+# in sqlqueries.jsonc.
 #
-# When done, a file _latestlog.json is created containing all queries, timestamps,
-# filenames and any exceptions that occured. 
+# When done, a file _latestlog.json is created for diagnostics.
 #
 # The script returns the number of files written (excl. the log file)
 #
@@ -91,8 +93,19 @@ function Main {
                 # No data, meaning the table is empty. Create JSON with empty array.
                 $data = "{ ""$($item.Name)"": [] }" | ConvertFrom-Json
             }
-            elseif ($null -ne $item.MaskProperties) {
-                MaskProperties -Properties $item.MaskProperties -Items $data.($Item.Name)
+            else {
+                # Mask all Encrypted (varbinary) fields as well as the fields already specified in MaskProperties (from sqlqueries.jsonc)
+                if ($item.TableName) {
+                    [array]$varBinaryFields = GetVarBinaryFields -TableName $item.TableName -DBServerInstance $DBServerInstance -DBName $DBName -DBConnectionEncrypt $DBConnectionEncrypt -ConnectionString $ConnectionString 
+                    [array]$item.MaskProperties = $($item.MaskProperties; $varBinaryFields) | Sort-Object -Unique
+                }
+                else {
+                    Write-Error "Cannot get list of encrypted fields for $($item.Name): no TableName is specified."
+                }
+
+                if ($null -ne $item.MaskProperties) {
+                    MaskProperties -Properties $item.MaskProperties -Items $data.($Item.Name)
+                }
             }
             $data | ConvertTo-Json -Depth 10 | Set-Content -Path $item.Filepath
             $logdata.FilesWritten = $logdata.FilesWritten + 1
@@ -100,7 +113,7 @@ function Main {
         catch {
             $logdata.ErrorCount = $logdata.ErrorCount + 1
             AddException -object $item -ErrorRecord $_
-            Write-Error "An error occured when executing query for '$($item.name)': $($item.ExceptionMessage). See $logfile for details."
+            Write-Error "An error occured when executing query for $($item.name): $($item.ExceptionMessage). See $logfile for details."
         }
     }
     $logdata.TimestampEnd = (get-date).tostring('o')
@@ -185,7 +198,7 @@ function ExecuteSQLForJsonQuery {
         $data = Invoke-SqlCmd -ConnectionString $ConnectionString -Query $SQLForJsonQuery -AbortOnError
     }
     else {
-    $data = Invoke-SqlCmd -ServerInstance $DBServerInstance -Database $DBName -Encrypt $DBConnectionEncrypt -Query $SQLForJsonQuery -AbortOnError
+        $data = Invoke-SqlCmd -ServerInstance $DBServerInstance -Database $DBName -Encrypt $DBConnectionEncrypt -Query $SQLForJsonQuery -AbortOnError
     }
 
     if ($null -eq $data) {
@@ -201,6 +214,54 @@ function ExecuteSQLForJsonQuery {
         throw "Could not determine how to parse the data. Expecting a string value formatted as json."
     }
     return $result
+}
+
+
+# Returns the list of VarBinary fields in the given table. 
+# In a passwordstate database, columns of type VarBinary are encrypted (according to ClickStudio Support)
+# (I wouldn't expect that the Hash and GUID columns are encrypted, btw.)
+function GetVarBinaryFields {
+    param (
+        [Parameter()]
+        [string] $DBServerInstance,
+
+        [Parameter()]
+        [string] $DBName,
+
+        [Parameter()]
+        [ValidateSet("", "Strict", "Mandatory", "Optional")]
+        [string] $DBConnectionEncrypt,
+
+        [Parameter()]
+        [string] $ConnectionString,
+
+        [Parameter(Mandatory)]
+        [string] $TableName
+    )
+    $query = @"
+SELECT col.name 
+FROM sys.columns col
+JOIN sys.tables tab ON tab.object_id = col.object_id
+JOIN sys.types typ ON typ.user_type_id = col.user_type_id
+WHERE 
+    tab.name = '$TableName'
+    AND typ.name = 'varbinary'
+"@
+    if ($ConnectionString) {
+        $data = Invoke-SqlCmd -ConnectionString $ConnectionString -Query $query -AbortOnError
+    }
+    else {
+        $data = Invoke-SqlCmd -ServerInstance $DBServerInstance -Database $DBName -Encrypt $DBConnectionEncrypt -Query $query -AbortOnError
+    }
+
+    if ($null -eq $data) {
+        $result = $null
+    }
+    else {
+        $result = $data.ItemArray
+    }
+    return $result
+
 }
 
 # For each item in the array, replace the values of specified properties by a fixed value
