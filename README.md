@@ -16,6 +16,7 @@ Powershell script that reads the PasswordState configuration from the database a
 - __-DBServerInstance__: The name of the SQL Server instance ("hostname\instance").
 - __-DBName__: The name of the database.
 - __-DBConnectionEncrypt__: Whether and how to encrypt the connection to the database. See the [documentation for Invoke-Sqlcmd](https://learn.microsoft.com/en-us/powershell/module/sqlserver/invoke-sqlcmd?view=sqlserver-ps#-encrypt). 
+- __-ConnectionString__: The connection string to connect to the database server. Use this parameter instead of DBServerInstance, DBName and DBConnectionEncrypt to get full control of the connection.
 
 ## Compatibility
 The current version has been tested with PasswordState version 9.8 Build 9858. Whether it works with other versions depends on the differences in the DB Schema. See the [PasswordState Change log](https://www.clickstudios.com.au/passwordstate-changelog.aspx).

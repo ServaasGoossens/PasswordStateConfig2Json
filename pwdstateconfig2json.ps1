@@ -29,18 +29,23 @@ param (
   [string] $OutputPath,
 
   # The name of the SQL Server instance ("hostname\instance")
-  [Parameter(Mandatory)]
+  [Parameter()]
   [string] $DBServerInstance,
 
   # The name of the database.
-  [Parameter(Mandatory)]
+  [Parameter()]
   [string] $DBName,
 
   # Whether and how to encrypt the connection to the database.
   # See https://learn.microsoft.com/en-us/powershell/module/sqlserver/invoke-sqlcmd?view=sqlserver-ps#-encrypt
-  [Parameter(Mandatory)]
+  [Parameter()]
   [ValidateSet("Strict", "Mandatory", "Optional")]
-  [string] $DBConnectionEncrypt
+  [string] $DBConnectionEncrypt,
+
+  # The connection string to connect to the database server
+  # Use this parameter instead of DBServerInstance, DBName and DBConnectionEncrypt to get full control of the connection.
+  [Parameter()]
+  [string] $ConnectionString
 )
 Import-Module SQLServer
 
@@ -60,6 +65,7 @@ function Main {
         "DBServerInstance" = $DBServerInstance
         "DBName" = $DBName
         "DBConnectionEncrypt" = $DBConnectionEncrypt
+        "ConnectionString" = (MaskPasswordInConnectionString -ConnectionString $ConnectionString)
         "OutputPath" = $OutputPath
         "ItemCount" = $SqlQueries.Count
         "FilesWritten" = 0
@@ -80,7 +86,7 @@ function Main {
             $item.Query = $item.Query | Join-String -Separator "`n"
         }
         try {
-            $data = ExecuteSQLForJsonQuery -DBServerInstance $DBServerInstance -DBName $DBName -DBConnectionEncrypt $DBConnectionEncrypt -SQLForJsonQuery $item.Query
+            $data = ExecuteSQLForJsonQuery -DBServerInstance $DBServerInstance -DBName $DBName -DBConnectionEncrypt $DBConnectionEncrypt -ConnectionString $ConnectionString -SQLForJsonQuery $item.Query
             if ($null -eq $data) {
                 # No data, meaning the table is empty. Create JSON with empty array.
                 $data = "{ ""$($item.Name)"": [] }" | ConvertFrom-Json
@@ -159,23 +165,31 @@ function GenerateSQLQuery {
 # Execute SQL Query, which must return JSON data ("for json"). Return the objects converted from json.
 function ExecuteSQLForJsonQuery {
     param (
-        [Parameter(Mandatory)]
+        [Parameter()]
         [string] $DBServerInstance,
 
-        [Parameter(Mandatory)]
+        [Parameter()]
         [string] $DBName,
 
-        [Parameter(Mandatory)]
-        [ValidateSet("Strict", "Mandatory", "Optional")]
+        [Parameter()]
+        [ValidateSet("", "Strict", "Mandatory", "Optional")]
         [string] $DBConnectionEncrypt,
+
+        [Parameter()]
+        [string] $ConnectionString,
 
         [Parameter(Mandatory)]
         [string] $SQLForJsonQuery
     )
+    if ($ConnectionString) {
+        $data = Invoke-SqlCmd -ConnectionString $ConnectionString -Query $SQLForJsonQuery -AbortOnError
+    }
+    else {
     $data = Invoke-SqlCmd -ServerInstance $DBServerInstance -Database $DBName -Encrypt $DBConnectionEncrypt -Query $SQLForJsonQuery -AbortOnError
+    }
 
     if ($null -eq $data) {
-        return $null
+        $result = $null
     }
     elseif ($data.length -eq 1) {
         $result = $data[0] | ConvertFrom-Json
@@ -208,6 +222,24 @@ function MaskProperties {
                 $item.$property = "********"
             }
         }
+    }
+}
+
+# returns the given connection string with password replaced by asterisks
+function MaskPasswordInConnectionString {
+    param (
+        [Parameter()]
+        [string] $ConnectionString
+    )
+    $csb = New-Object System.Data.SqlClient.SqlConnectionStringBuilder $ConnectionString
+    # if the connection string contains a password, then replace it.
+    if ($csb["Password"]) {
+        $csb["Password"] = "********"
+        return $csb.ConnectionString
+    }
+    else {
+        # if it doesn't contain a password, return the original input.
+        return $ConnectionString
     }
 }
 
