@@ -95,14 +95,8 @@ function Main {
             }
             else {
                 # Mask all Encrypted (varbinary) fields as well as the fields already specified in MaskProperties (from sqlqueries.jsonc)
-                if ($item.TableName) {
-                    [array]$varBinaryFields = GetVarBinaryFields -TableName $item.TableName -DBServerInstance $DBServerInstance -DBName $DBName -DBConnectionEncrypt $DBConnectionEncrypt -ConnectionString $ConnectionString 
-                    [array]$item.MaskProperties = $($item.MaskProperties; $varBinaryFields) | Sort-Object -Unique
-                }
-                else {
-                    Write-Error "Cannot get list of encrypted fields for $($item.Name): no TableName is specified."
-                }
-
+                [array]$varBinaryFields = GetVarBinaryFields -TableName $item.TableName -DBServerInstance $DBServerInstance -DBName $DBName -DBConnectionEncrypt $DBConnectionEncrypt -ConnectionString $ConnectionString 
+                [array]$item.MaskProperties = $($item.MaskProperties; $varBinaryFields) | Sort-Object -Unique
                 if ($null -ne $item.MaskProperties) {
                     MaskProperties -Properties $item.MaskProperties -Items $data.($Item.Name)
                 }
