@@ -2,6 +2,10 @@
     {
         "Name": "DiscoveryJobs",
         "Tablename": "DiscoveryJobs",
+        "MaskProperties": [
+            "DiscoveryTook", // This value changes all the time, which makes it a distraction.
+            "HostNotFound"  // This value changes all the time, which makes it a distraction.
+        ]
     },
     {
         "Name": "ActiveDirectoryDomains",
@@ -312,7 +316,10 @@
         "Tablename": "SystemSettings",
         "MaskProperties": [
             "Secret3",
-            "Secret4"
+            "Secret4",
+            "NewVersionNo", // This value changes due to external factors, which makes it a distraction.
+            "NewBuildNo",   // This value changes due to external factors, which makes it a distraction.
+            "LastUpdateCheck" // This value changes all the time, which makes it a distraction.
         ]
     },
     {
