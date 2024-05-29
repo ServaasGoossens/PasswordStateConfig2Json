@@ -1,5 +1,5 @@
 # PasswordStateConfig2Json
-Powershell script that reads the PasswordState configuration from the database and stores it in JSON format.
+This PowerShell script allows you to track configuration changes in PasswordState. It reads the full configuration directly from the database and writes it to JSON files. You can then store these files in any version control system (like git).
 
 ## Prerequisites
 - [PasswordState](https://www.clickstudios.com.au/passwordstate.aspx) version 9.8 (see compatibility below)
@@ -22,6 +22,6 @@ Powershell script that reads the PasswordState configuration from the database a
 The current version has been tested with PasswordState version 9.8 Build 9858. Whether it works with other versions depends on the differences in the DB Schema. See the [PasswordState Change log](https://www.clickstudios.com.au/passwordstate-changelog.aspx).
 
 ## What about keys and other sensitive data?
-The script masks sensitive data that is part of the configuration. It does this by removing keys and passwords and replacing them with asterisks before the data is stored on disk.
+The script masks sensitive data that is part of the configuration, such as keys and passwords. It replaces these values with asterisks before the data is stored on disk. Some non-sensitive data is also masked. This applies to data that changes regularly as a result of normal operations (hence, it is not configuration data).
 
-__TAKE CARE__: I may have missed some data that should be masked. Please let me know by creating an issue. __You are responsible for verifying the results in your environment. No warranty, use at your own risk.__
+__Note__: All fields of type VarBinary are masked. Most of these are encrypted (according to ClickStudios support). Encryption keys are obviously not encrypted, but they are masked as well. I may still have missed some data that should be masked. Please let me know by creating an issue.
